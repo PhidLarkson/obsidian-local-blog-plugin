@@ -19,12 +19,12 @@ export default class BlogPlugin extends Plugin {
     await this.loadSettings();
 
     // Add ribbon icon to fetch and save blog post
-    this.addRibbonIcon('globe', 'Fetch and Save Blog Post', async () => {
+    this.addRibbonIcon('book-down', 'Load a blog to local', async () => {
       new FetchBlogModal(this.app, this).open();
     });
 
     // Add ribbon icon to show blog directory files with stars
-    this.addRibbonIcon('star', 'Show All Blog Posts', async () => {
+    this.addRibbonIcon('library-big', 'All local blogs', async () => {
       await this.showAllBlogs();
     });
 
@@ -122,7 +122,8 @@ class FetchBlogModal extends Modal {
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl('h3', { text: 'Fetch and Save Blog Post' });
+    contentEl.createEl('h3', { text: 'Load a blog on local' });
+    contentEl.createEl('small', { text: 'Efie is home in Akan' });
 
     // Neatly arrange input fields with labels
     const formEl = contentEl.createEl('div', { cls: 'blog-fetch-form' });
@@ -130,18 +131,18 @@ class FetchBlogModal extends Modal {
     formEl.createEl('label', { text: 'Publication Host:' });
     const hostInput = formEl.createEl('input', {
       type: 'text',
-      placeholder: 'Enter publication host',
+      placeholder: 'Enter publication host. eg. username.hashnode.dev',
     });
     hostInput.value = this.plugin.settings.host;
 
     formEl.createEl('label', { text: 'Blog Post Slug:' });
     const slugInput = formEl.createEl('input', {
       type: 'text',
-      placeholder: 'Enter blog post slug',
+      placeholder: 'Enter blog post slug. eg. my-blog-post',
     });
     slugInput.value = this.plugin.settings.slug;
 
-    const fetchButton = contentEl.createEl('button', { text: 'Fetch and Save' });
+    const fetchButton = contentEl.createEl('button', { text: 'Load Blog' });
     fetchButton.onclick = async () => {
       this.plugin.settings.host = hostInput.value.trim();
       this.plugin.settings.slug = slugInput.value.trim();
@@ -190,7 +191,7 @@ class AllBlogsModal extends Modal {
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl('h3', { text: 'All Blog Posts' });
+    contentEl.createEl('h3', { text: 'Local Blog Posts' });
 
     this.files.forEach(file => {
       const item = contentEl.createEl('div', { cls: 'blog-list-item' });

@@ -1,4 +1,4 @@
-import { Plugin, Notice, Modal, Setting, App, PluginSettingTab, TFile, MarkdownView } from 'obsidian';
+import { Plugin, Notice, Modal, App, PluginSettingTab, TFile, MarkdownView, Setting } from 'obsidian';
 
 interface BlogPluginSettings {
   host: string;
@@ -14,28 +14,22 @@ const DEFAULT_SETTINGS: BlogPluginSettings = {
 
 export default class BlogPlugin extends Plugin {
   settings: BlogPluginSettings;
-  recentBlogs: string[] = []; // Array to keep track of recent blog file paths
 
   async onload() {
-  await this.loadSettings();
+    await this.loadSettings();
 
-  // Add ribbon icon to fetch and render blog post
-  this.addRibbonIcon('globe', 'Fetch and Render Blog Post', async () => {
-    new FetchBlogModal(this.app, this).open();
-  });
+    // Add ribbon icon to fetch and save blog post
+    this.addRibbonIcon('globe', 'Fetch and Save Blog Post', async () => {
+      new FetchBlogModal(this.app, this).open();
+    });
 
-  // Add ribbon icon to show recent blogs
-  // this.addRibbonIcon('star', 'Show Recent Blogs', async () => {
-	// await this.showRecentBlogs();
-  // });  
+    // Add ribbon icon to show blog directory files with stars
+    this.addRibbonIcon('star', 'Show All Blog Posts', async () => {
+      await this.showAllBlogs();
+    });
 
-  // Add the plugin settings tab
-  this.addSettingTab(new BlogPluginSettingTab(this.app, this));
-
-  // Ensure that recent blogs are correctly loaded
-  await this.loadSettings();
-}
-
+    this.addSettingTab(new BlogPluginSettingTab(this.app, this));
+  }
 
   async fetchBlogPost(): Promise<string | null> {
     const { host, slug } = this.settings;
@@ -75,19 +69,6 @@ export default class BlogPlugin extends Plugin {
     }
   }
 
-  async renderFetchedBlog() {
-    const markdownContent = await this.fetchBlogPost();
-    if (markdownContent) {
-      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (view) {
-        view.editor.setValue(markdownContent);
-        new Notice('Blog post rendered successfully!');
-      } else {
-        new Notice('Please open a markdown file to render the blog content.');
-      }
-    }
-  }
-
   async saveFetchedBlog() {
     const markdownContent = await this.fetchBlogPost();
     if (markdownContent) {
@@ -97,9 +78,6 @@ export default class BlogPlugin extends Plugin {
       try {
         await this.app.vault.create(filePath, markdownContent);
         new Notice(`Blog saved as ${fileName} in ${this.settings.saveLocation}`);
-        await this.openMarkdownFile(filePath);
-        this.recentBlogs.push(filePath);
-        await this.saveSettings();
       } catch (error) {
         console.error('Error saving blog:', error);
         new Notice('Failed to save the blog. Please try again.');
@@ -107,28 +85,30 @@ export default class BlogPlugin extends Plugin {
     }
   }
 
-  async openMarkdownFile(filePath: string) {
-    const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (file instanceof TFile) {
-      const leaf = this.app.workspace.getLeaf(false);
-      await leaf.openFile(file);
-    }
-  }
+  async showAllBlogs() {
+    const { saveLocation } = this.settings;
+    const folder = this.app.vault.getAbstractFileByPath(saveLocation);
 
-  async showRecentBlogs() {
-    new RecentBlogsModal(this.app, this).open();
+    if (folder && folder instanceof TFile) {
+      new Notice(`${saveLocation} is a file, not a folder.`);
+      return;
+    }
+
+    const files = folder ? folder.children.filter(child => child instanceof TFile) : [];
+    if (files.length === 0) {
+      new Notice(`No files found in ${saveLocation}.`);
+      return;
+    }
+
+    new AllBlogsModal(this.app, this, files as TFile[]).open();
   }
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    const savedRecentBlogs = await this.loadData();
-    if (savedRecentBlogs && savedRecentBlogs.recentBlogs) {
-      this.recentBlogs = savedRecentBlogs.recentBlogs;
-    }
   }
 
   async saveSettings() {
-    await this.saveData({ ...this.settings, recentBlogs: this.recentBlogs });
+    await this.saveData(this.settings);
   }
 }
 
@@ -142,28 +122,54 @@ class FetchBlogModal extends Modal {
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl('h3', { text: 'Fetch and Render Blog Post' });
+    contentEl.createEl('h3', { text: 'Fetch and Save Blog Post' });
 
-    const hostInput = contentEl.createEl('input', {
+    // Neatly arrange input fields with labels
+    const formEl = contentEl.createEl('div', { cls: 'blog-fetch-form' });
+
+    formEl.createEl('label', { text: 'Publication Host:' });
+    const hostInput = formEl.createEl('input', {
       type: 'text',
       placeholder: 'Enter publication host',
     });
     hostInput.value = this.plugin.settings.host;
 
-    const slugInput = contentEl.createEl('input', {
+    formEl.createEl('label', { text: 'Blog Post Slug:' });
+    const slugInput = formEl.createEl('input', {
       type: 'text',
       placeholder: 'Enter blog post slug',
     });
     slugInput.value = this.plugin.settings.slug;
 
-    const fetchButton = contentEl.createEl('button', { text: 'Open in Obsidian' });
+    const fetchButton = contentEl.createEl('button', { text: 'Fetch and Save' });
     fetchButton.onclick = async () => {
       this.plugin.settings.host = hostInput.value.trim();
       this.plugin.settings.slug = slugInput.value.trim();
       await this.plugin.saveSettings();
-      await this.plugin.renderFetchedBlog();
+      await this.plugin.saveFetchedBlog();
       this.close();
     };
+
+    // Add some styling
+    contentEl.createEl('style').textContent = `
+      .blog-fetch-form {
+        display: grid;
+        gap: 10px;
+        margin-top: 10px;
+      }
+      .blog-fetch-form label {
+        font-weight: bold;
+      }
+      .blog-fetch-form input {
+        padding: 5px;
+        font-size: 1rem;
+      }
+      button {
+        margin-top: 15px;
+        padding: 5px 10px;
+        font-size: 1rem;
+      }
+    `;
   }
 
   onClose() {
@@ -172,31 +178,52 @@ class FetchBlogModal extends Modal {
   }
 }
 
-class RecentBlogsModal extends Modal {
+class AllBlogsModal extends Modal {
   plugin: BlogPlugin;
+  files: TFile[];
 
-  constructor(app: App, plugin: BlogPlugin) {
+  constructor(app: App, plugin: BlogPlugin, files: TFile[]) {
     super(app);
     this.plugin = plugin;
+    this.files = files;
   }
 
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl('h3', { text: 'Recent Blogs' });
+    contentEl.createEl('h3', { text: 'All Blog Posts' });
 
-    if (this.plugin.recentBlogs.length === 0) {
-      contentEl.createEl('p', { text: 'No recent blogs found.' });
-      return;
-    }
+    this.files.forEach(file => {
+      const item = contentEl.createEl('div', { cls: 'blog-list-item' });
+      const starIcon = item.createEl('span', { text: '★', cls: 'star-icon' });
+      const fileNameEl = item.createEl('span', { text: file.name });
 
-    this.plugin.recentBlogs.forEach(filePath => {
-      const fileName = filePath.split('/').pop() || filePath;
-      const item = contentEl.createEl('div', { text: fileName });
       item.addEventListener('click', async () => {
-        await this.plugin.openMarkdownFile(filePath);
+        const leaf = this.app.workspace.getLeaf(false);
+        await leaf.openFile(file);
         this.close();
       });
     });
+
+    // Add styling for the blog list items
+    contentEl.createEl('style').textContent = `
+      .blog-list-item {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        margin: 5px 0;
+      }
+      .star-icon {
+        color: gold;
+        margin-right: 8px;
+      }
+      .blog-list-item:hover {
+        background-color: #333;
+        border-radius: 4px;
+      }
+      .blog-list-item span {
+        padding: 5px;
+      }
+    `;
   }
 
   onClose() {

@@ -1,6 +1,8 @@
 # Efie Plugin 🌍
 
 Efie (meaning "home" in Akan) is an Obsidian plugin that fetches and saves blog posts to a designated directory. The plugin organizes blog posts neatly and provides easy access to your fetched content with a ribbon icon for quick navigation.
+![image](https://github.com/user-attachments/assets/f09d4560-508c-4054-96e6-41ab6a4577e9)
+
 
 ## Features
 

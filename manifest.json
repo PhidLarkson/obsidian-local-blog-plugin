@@ -3,8 +3,8 @@
 	"name": "Efie Local Blog",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Load and save blogs on the local machine.",
+	"description": "Efie Plugin fetches and saves blog posts into a designated directory, making them easily accessible and organized.",
 	"author": "Prince Larbi",
-	"authorUrl": "https://pnlarbi.vercel.app/",
+	"authorUrl": "https://github.com/PhidLarkson/obsidian-local-blog-plugin/",
 	"isDesktopOnly": false
 }

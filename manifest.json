@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "local-blog-plugin",
+	"name": "Efie Local Blog",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Load and save blogs on the local machine.",
+	"author": "Prince Larbi",
+	"authorUrl": "https://pnlarbi.vercel.app/",
 	"isDesktopOnly": false
 }
